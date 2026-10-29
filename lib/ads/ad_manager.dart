@@ -1,93 +1,121 @@
-
-// QTEA LIVE V4.2 - AdMob System TANPA Interstitial (Sesuai Request)
-// Hanya 2 iklan: App Open + Rewarded
-
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
 
-class QTEAAdManager {
-  static final QTEAAdManager _instance = QTEAAdManager._internal();
-  factory QTEAAdManager() => _instance;
-  QTEAAdManager._internal();
-
-  // Test IDs - Ganti dengan Ad Unit ID asli setelah daftar AdMob
-  String get appOpenAdUnitId => Platform.isAndroid 
-      ? 'ca-app-pub-3940256099942544/9257395921' // Test App Open
-      : 'ca-app-pub-3940256099942544/5575463023';
-
-  String get rewardedAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/5224354917' // Test Rewarded
-      : 'ca-app-pub-3940256099942544/1712485313';
-
-  String get bannerAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/6300978111'
-      : 'ca-app-pub-3940256099942544/2934735716';
+class QteaAdManager {
+  static final QteaAdManager _instance = QteaAdManager._internal();
+  factory QteaAdManager() => _instance;
+  QteaAdManager._internal();
 
   AppOpenAd? _appOpenAd;
   RewardedAd? _rewardedAd;
-  bool isAppOpenAdLoaded = false;
+  bool _isShowingAppOpen = false;
 
-  Future<void> init() async {
-    await MobileAds.instance.initialize();
+  // TEST AD UNITS - Ganti dengan ID asli nanti
+  static String get appOpenAdUnitId {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/9257395921'; // Test App Open
+    }
+    return 'ca-app-pub-3940256099942544/5575463023';
+  }
+
+  static String get rewardedAdUnitId {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/5224354917'; // Test Rewarded
+    }
+    return 'ca-app-pub-3940256099942544/1712485313';
+  }
+
+  void initialize() {
+    MobileAds.instance.initialize();
     loadAppOpenAd();
     loadRewardedAd();
   }
 
-  // 1. APP OPEN AD - Pas buka aplikasi (cuan gede, tidak ganggu)
+  // APP OPEN AD - 3 sec on app open - QTEA LIVE V4.2
   void loadAppOpenAd() {
     AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
-      request: AdRequest(),
+      request: const AdRequest(),
+      orientation: AppOpenAd.orientation.portrait,
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
           _appOpenAd = ad;
-          isAppOpenAdLoaded = true;
-          print('QTEA: App Open Ad loaded');
+          _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _appOpenAd = null;
+              loadAppOpenAd();
+              _isShowingAppOpen = false;
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _appOpenAd = null;
+              _isShowingAppOpen = false;
+              loadAppOpenAd();
+            },
+          );
         },
         onAdFailedToLoad: (error) {
-          print('QTEA: App Open Ad failed: $error');
+          print('AppOpenAd failed: $error');
+          _appOpenAd = null;
         },
       ),
     );
   }
 
-  void showAppOpenAd() {
-    if (_appOpenAd != null) {
-      _appOpenAd!.show();
-      _appOpenAd = null;
-      isAppOpenAdLoaded = false;
+  void showAppOpenAdIfAvailable() {
+    if (_appOpenAd == null) {
       loadAppOpenAd();
+      return;
     }
+    if (_isShowingAppOpen) return;
+    _isShowingAppOpen = true;
+    _appOpenAd!.show();
   }
 
-  // 2. REWARDED AD - Nonton iklan dapat 100 topup_beans gratis (TIDAK BISA WD)
+  // REWARDED AD - Watch ad get 100 free beans, max 10x/day
   void loadRewardedAd() {
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
-      request: AdRequest(),
+      request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
+          _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _rewardedAd = null;
+              loadRewardedAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _rewardedAd = null;
+              loadRewardedAd();
+            },
+          );
         },
-        onAdFailedToLoad: (error) {},
+        onAdFailedToLoad: (error) {
+          print('RewardedAd failed: $error');
+          _rewardedAd = null;
+        },
       ),
     );
   }
 
-  void showRewardedAd({required Function(int rewardBeans) onRewarded}) {
-    if (_rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          loadRewardedAd();
-        },
-      );
-      _rewardedAd!.show(
-        onUserEarnedReward: (ad, reward) {
-          int freeBeans = 100;
-          onRewarded(freeBeans);
-        },
-      );
+  void showRewardedAd({required Function(RewardItem) onRewarded}) {
+    if (_rewardedAd == null) {
+      loadRewardedAd();
+      return;
     }
+    _rewardedAd!.show(
+      onUserEarnedReward: (ad, reward) {
+        onRewarded(reward);
+      },
+    );
+  }
+
+  void dispose() {
+    _appOpenAd?.dispose();
+    _rewardedAd?.dispose();
   }
 }
