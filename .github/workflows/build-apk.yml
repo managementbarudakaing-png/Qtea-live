@@ -1,4 +1,4 @@
-name: Build QTEA LIVE APK V4.2 FINAL - Host 60% Agency 15% Platform 25%
+name: Build QTEA LIVE APK V4.2 FINAL
 
 on:
   push:
@@ -8,10 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -26,28 +24,34 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Flutter doctor
-        run: flutter doctor -v
+      - name: Force fix pubspec.yaml name FIRST
+        run: |
+          echo "BEFORE:"
+          cat pubspec.yaml | head -3
+          sed -i 's/^name:.*/name: qtea_live/' pubspec.yaml
+          echo "AFTER:"
+          cat pubspec.yaml | head -3
 
       - name: Fix Android project if missing
         run: |
           if [ ! -d "android" ]; then
-            echo "Android folder missing - creating new flutter project structure"
-            flutter create . --platforms=android --org=com.barudakaing.qtealive
+            echo "Android missing - creating in /tmp and copying"
+            rm -rf /tmp/qtea_temp
+            flutter create /tmp/qtea_temp --platforms=android --project-name qtea_live --org com.barudakaing.qtealive
+            cp -r /tmp/qtea_temp/android ./
+            ls android/
           else
-            echo "Android folder exists"
-            ls -la android/
+            echo "Android exists"
           fi
 
-      - name: Get Flutter packages
+      - name: Get packages
         run: flutter pub get
 
-      - name: Build APK Release (QTEA LIVE V4.2 - No Interstitial)
+      - name: Build APK Release
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: QTEA-LIVE-V4.2-FINAL-60-15-25-APK
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
