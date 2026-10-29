@@ -1,4 +1,4 @@
-name: QTEA LIVE Build V4.2
+name: Build QTEA LIVE APK V4.2 FINAL - Host 60% Agency 15% Platform 25%
 
 on:
   push:
@@ -8,8 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -27,6 +29,16 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      - name: Fix Android project if missing
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Android folder missing - creating new flutter project structure"
+            flutter create . --platforms=android --org=com.barudakaing.qtealive
+          else
+            echo "Android folder exists"
+            ls -la android/
+          fi
+
       - name: Get Flutter packages
         run: flutter pub get
 
@@ -38,3 +50,4 @@ jobs:
         with:
           name: QTEA-LIVE-V4.2-FINAL-60-15-25-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
