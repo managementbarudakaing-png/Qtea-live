@@ -14,6 +14,7 @@ class QteaAdManager {
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
           _appOpenAd = ad;
+          _appOpenAd!.show();
         },
         onAdFailedToLoad: (error) {
           print('AppOpenAd failed: $error');
