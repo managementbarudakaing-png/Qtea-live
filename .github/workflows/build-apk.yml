@@ -1,57 +1,51 @@
-name: Build QTEA LIVE APK V4.2 FINAL
-
+name: Build QTEA LIVE APK V4.4 LOGIN Gmail + HP
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - name: Setup Flutter 3.19.0
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
           cache: true
-
-      - name: Force fix pubspec.yaml name FIRST
-        run: |
-          echo "BEFORE:"
-          cat pubspec.yaml | head -3
-          sed -i 's/^name:.*/name: qtea_live/' pubspec.yaml
-          echo "AFTER:"
-          cat pubspec.yaml | head -3
-
-      - name: Fix Android project if missing
+      - name: Force fix pubspec name
+        run: sed -i 's/^name:.*/name: qtea_live/' pubspec.yaml
+      - name: Fix Android project
         run: |
           if [ ! -d "android" ]; then
-            echo "Android missing - creating in /tmp and copying"
-            rm -rf /tmp/qtea_temp
             flutter create /tmp/qtea_temp --platforms=android --project-name qtea_live --org com.barudakaing.qtealive
             cp -r /tmp/qtea_temp/android ./
-            ls android/
-          else
-            echo "Android exists"
           fi
-
+      - name: Create dummy google-services.json
+        run: |
+          if [ ! -f "android/app/google-services.json" ]; then
+            echo '{"project_info":{"project_number":"123","project_id":"qtea-live-dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abcdef","android_client_info":{"package_name":"com.barudakaing.qtealive"}},"oauth_client":[],"api_key":[{"current_key":"dummy"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > android/app/google-services.json
+          fi
+      - name: Add Permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            if ! grep -q "CAMERA" "$MANIFEST"; then
+              sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />' "$MANIFEST"
+            fi
+          fi
       - name: Get packages
         run: flutter pub get
-
-      - name: Build APK Release
+      - name: Build APK Release V4.4
         run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Upload APK
+      - name: Upload APK V4.4 LOGIN
         uses: actions/upload-artifact@v4
         with:
-          name: QTEA-LIVE-V4.2-FINAL-60-15-25-APK
+          name: QTEA-LIVE-V4.4-LOGIN-Gmail-HP
           path: build/app/outputs/flutter-apk/app-release.apk
