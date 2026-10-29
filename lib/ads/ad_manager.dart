@@ -10,6 +10,7 @@ class QteaAdManager {
   void loadAppOpenAd() {
     AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
+      orientation: AppOpenAd.orientation.portrait,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
