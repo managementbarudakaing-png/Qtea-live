@@ -1,66 +1,92 @@
-
-import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'screens/home_screen.dart';
-import 'screens/live_room_screen.dart';
-import 'screens/withdraw_screen.dart';
-import 'screens/agency_screen.dart';
-import 'ads/ad_manager.dart';
+import 'dart:io';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
-  await QTEAAdManager().init(); // Load App Open + Rewarded (tanpa Interstitial)
-  runApp(QTEALiveApp());
-}
+class QteaAdManager {
+  static const String appOpenAdUnitId = 'ca-app-pub-3940256099942544/9257395921';
+  static const String rewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
 
-class QTEALiveApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QTEA LIVE V4.2 - Ads 60/15/25',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primaryColor: Color(0xFF2B9AF3), scaffoldBackgroundColor: Color(0xFF0A0A0A)),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => HomeScreen(),
-        '/live': (context) => LiveRoomScreen(),
-        '/withdraw': (context) => WithdrawScreen(),
-        '/agency': (context) => AgencyScreen(),
-      },
+  AppOpenAd? _appOpenAd;
+  RewardedAd? _rewardedAd;
+  bool _isShowingAppOpenAd = false;
+
+  void loadAppOpenAd() {
+    AppOpenAd.load(
+      adUnitId: appOpenAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: AppOpenAdLoadCallback(
+        onAdLoaded: (ad) {
+          _appOpenAd = ad;
+          _appOpenAd!.show();
+        },
+        onAdFailedToLoad: (error) {
+          print('AppOpenAd failed: $error');
+        },
+      ),
+      orientation: AppOpenAd.orientation.portrait,
     );
   }
-}
 
-// Splash with App Open Ad
-class SplashScreen extends StatefulWidget {
-  @override
-  _SplashScreenState createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(Duration(seconds: 1), () {
-      QTEAAdManager().showAppOpenAd(); // App Open Ad pas buka app - cuan
-      Future.delayed(Duration(seconds: 3), () {
-        Navigator.pushReplacementNamed(context, '/');
-      });
-    });
+  void showAppOpenAdIfAvailable() {
+    if (_appOpenAd == null) {
+      loadAppOpenAd();
+      return;
+    }
+    if (_isShowingAppOpenAd) return;
+    
+    _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        _isShowingAppOpenAd = true;
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        _isShowingAppOpenAd = false;
+        ad.dispose();
+        _appOpenAd = null;
+        loadAppOpenAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        _isShowingAppOpenAd = false;
+        ad.dispose();
+        _appOpenAd = null;
+      },
+    );
+    _appOpenAd!.show();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Image.asset('assets/logo/qtea_flat_blue_transparent.png', height: 120),
-          SizedBox(height: 16),
-          CircularProgressIndicator(color: Color(0xFF2B9AF3)),
-        ]),
+  void loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+        },
+        onAdFailedToLoad: (error) {
+          print('RewardedAd failed: $error');
+        },
       ),
+    );
+  }
+
+  void showRewardedAd({required Function(RewardItem) onRewarded}) {
+    if (_rewardedAd == null) {
+      loadRewardedAd();
+      return;
+    }
+    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _rewardedAd = null;
+        loadRewardedAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _rewardedAd = null;
+      },
+    );
+    _rewardedAd!.show(
+      onUserEarnedReward: (ad, reward) {
+        onRewarded(reward);
+      },
     );
   }
 }
