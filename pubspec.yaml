@@ -1,5 +1,5 @@
 name: qtea_live
-description: QTEA LIVE V4.4 LOGIN Gmail + HP - Live Streaming - Logo Q Baru
+description: QTEA LIVE V4.4 MOCK LOGIN - Logo Q Baru - Host 60 Agency 15 Platform 25
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,9 +12,6 @@ dependencies:
   cupertino_icons: ^1.0.5
   zego_uikit_prebuilt_live_streaming: ^3.8.9
   permission_handler: ^11.0.1
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.12.0
-  google_sign_in: ^6.1.6
 
 dev_dependencies:
   flutter_test:
