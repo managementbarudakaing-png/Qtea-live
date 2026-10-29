@@ -1,5 +1,4 @@
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'dart:io';
 
 class QteaAdManager {
   static const String appOpenAdUnitId = 'ca-app-pub-3940256099942544/9257395921';
@@ -7,7 +6,6 @@ class QteaAdManager {
 
   AppOpenAd? _appOpenAd;
   RewardedAd? _rewardedAd;
-  bool _isShowingAppOpenAd = false;
 
   void loadAppOpenAd() {
     AppOpenAd.load(
@@ -16,13 +14,11 @@ class QteaAdManager {
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
           _appOpenAd = ad;
-          _appOpenAd!.show();
         },
         onAdFailedToLoad: (error) {
           print('AppOpenAd failed: $error');
         },
       ),
-      orientation: AppOpenAd.orientation.portrait,
     );
   }
 
@@ -31,20 +27,13 @@ class QteaAdManager {
       loadAppOpenAd();
       return;
     }
-    if (_isShowingAppOpenAd) return;
-    
     _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (ad) {
-        _isShowingAppOpenAd = true;
-      },
       onAdDismissedFullScreenContent: (ad) {
-        _isShowingAppOpenAd = false;
         ad.dispose();
         _appOpenAd = null;
         loadAppOpenAd();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
-        _isShowingAppOpenAd = false;
         ad.dispose();
         _appOpenAd = null;
       },
@@ -83,10 +72,8 @@ class QteaAdManager {
         _rewardedAd = null;
       },
     );
-    _rewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onRewarded(reward);
-      },
-    );
+    _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
+      onRewarded(reward);
+    });
   }
 }
